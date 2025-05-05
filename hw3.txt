@@ -1,0 +1,59 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int sum; /* this data is shared by the thread(s) */
+void *runner(void *param); /* threads call this function */
+
+/* 新增 listncopy 函式 */
+void listncopy(int *src, int *dst, int n)
+{
+    for (int i = 0; i < n; i++)
+        dst[i] = src[i];
+}
+
+int main(int argc, char *argv[])
+{
+    pthread_t tid;              /* the thread identifier */
+    pthread_attr_t attr;        /* set of thread attributes */
+
+    /* set the default attributes of the thread */
+    pthread_attr_init(&attr);
+
+    /* create the thread */
+    pthread_create(&tid, &attr, runner, argv[1]);
+
+    /* wait for the thread to exit */
+    pthread_join(tid, NULL);
+
+    printf("A10555501 sum = %d\n", sum);
+}
+
+/* The thread will execute in this function */
+void *runner(void *param)
+{
+    int i, upper = atoi((char *)param);
+    sum = 0;
+
+    /* 新增 list 並填值 */
+    int *list = (int *)malloc(sizeof(int) * upper);
+    for (i = 0; i < upper; i++)
+        list[i] = i + 1;
+
+    /* 複製 list 到 copy */
+    int *copy = (int *)malloc(sizeof(int) * upper);
+    listncopy(list, copy, upper);
+
+    /* 印出 copy 的內容 */
+    printf("copy: ");
+    for (i = 0; i < upper; i++) {
+        printf("%d ", copy[i]);
+        sum += list[i];
+    }
+    printf("\n");
+
+    free(list);
+    free(copy);
+
+    pthread_exit(0);
+}
