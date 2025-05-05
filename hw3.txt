@@ -56,19 +56,70 @@ unsigned long do_sort(char *id, int *first, int n) {
     return usec;
 }
 
-// 合併排序（僅量測時間，未實作實際合併）
+// Merge sort functions
+void merge(int arr[], int l, int m, int r) {
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int *L = (int *)malloc(n1 * sizeof(int));
+    int *R = (int *)malloc(n2 * sizeof(int));
+
+    for (i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+
+    i = 0; j = 0; k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        arr[k] = L[i];
+        i++; k++;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        j++; k++;
+    }
+
+    free(L);
+    free(R);
+}
+
+void merge_sort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        merge_sort(arr, l, m);
+        merge_sort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}
+
 unsigned long do_merge(char *id, int *first, int n) {
     struct timeval start, end;
     unsigned long usec;
+    print_list(id, "Merge-Old", first, n);
     gettimeofday(&start, NULL);
-    // 此處可實作合併排序
+
+    merge_sort(first, 0, n - 1);
+
     gettimeofday(&end, NULL);
+    print_list(id, "Merge-New", first, n);
     usec = usec_elapsed(start, end);
     printf("%s merge spent %lu usec\n", id, usec);
     return usec;
 }
 
-// 執行緒函式
 void *thread_sort0(void *arg) {
     t0 = do_sort("A1055501#0", original_list, N_LIST/2);
     return NULL;
@@ -88,16 +139,13 @@ void *runner(void *param)
     int i, upper = atoi((char *)param);
     sum = 0;
 
-    /* 新增 list 並填值 */
     int *list = (int *)malloc(sizeof(int) * upper);
     for (i = 0; i < upper; i++)
         list[i] = i + 1;
 
-    /* 複製 list 到 copy */
     int *copy = (int *)malloc(sizeof(int) * upper);
     listncopy_int(list, copy, upper);
 
-    /* 印出 copy 的內容 */
     printf("copy: ");
     for (i = 0; i < upper; i++) {
         printf("%d ", copy[i]);
@@ -111,13 +159,11 @@ void *runner(void *param)
     pthread_exit(0);
 }
 
-/* ========== 主程式 ========== */
 int main(int argc, char *argv[])
 {
-    /* --- 第一部分 --- */
     if (argc > 1) {
-        pthread_t tid;              /* the thread identifier */
-        pthread_attr_t attr;        /* set of thread attributes */
+        pthread_t tid;
+        pthread_attr_t attr;
 
         pthread_attr_init(&attr);
         pthread_create(&tid, &attr, runner, argv[1]);
@@ -127,13 +173,12 @@ int main(int argc, char *argv[])
         printf("未輸入參數，略過第一部分\n");
     }
 
-    /* --- 第二部分 --- */
     int mylist[N_LIST];
     pthread_t tid0, tid1, tidm;
 
     printf("\n==== 第二部分：多執行緒排序 ====\n");
-    listncopy(mylist, original_list, N_LIST);  // Step 1
-    do_sort("A1055501-X", mylist, N_LIST);     // Step 2
+    listncopy(mylist, original_list, N_LIST);
+    do_sort("A1055501-X", mylist, N_LIST);
 
     print_list("A1055501-M", "All-Old", original_list, N_LIST);
 
